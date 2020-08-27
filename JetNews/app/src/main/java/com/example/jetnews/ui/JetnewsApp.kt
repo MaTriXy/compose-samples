@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 Google, Inc.
+ * Copyright 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,52 +16,79 @@
 
 package com.example.jetnews.ui
 
-import androidx.annotation.DrawableRes
-import androidx.compose.Composable
-import androidx.ui.animation.Crossfade
-import androidx.ui.core.Modifier
-import androidx.ui.core.Text
-import androidx.ui.foundation.shape.corner.RoundedCornerShape
-import androidx.ui.graphics.Color
-import androidx.ui.layout.Arrangement
-import androidx.ui.layout.Column
-import androidx.ui.layout.LayoutGravity
-import androidx.ui.layout.LayoutHeight
-import androidx.ui.layout.LayoutPadding
-import androidx.ui.layout.LayoutSize
-import androidx.ui.layout.LayoutWidth
-import androidx.ui.layout.Row
-import androidx.ui.layout.Spacer
-import androidx.ui.material.Divider
-import androidx.ui.material.MaterialTheme
-import androidx.ui.material.TextButton
-import androidx.ui.material.surface.Surface
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.Text
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.preferredHeight
+import androidx.compose.foundation.layout.preferredWidth
+import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.VectorAsset
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.dp
 import androidx.ui.tooling.preview.Preview
-import androidx.ui.unit.dp
 import com.example.jetnews.R
+import com.example.jetnews.data.AppContainer
+import com.example.jetnews.data.interests.InterestsRepository
+import com.example.jetnews.data.posts.PostsRepository
 import com.example.jetnews.ui.article.ArticleScreen
 import com.example.jetnews.ui.home.HomeScreen
 import com.example.jetnews.ui.interests.InterestsScreen
+import com.example.jetnews.ui.theme.JetnewsTheme
 
 @Composable
-fun JetnewsApp() {
-
-    MaterialTheme(
-        colors = lightThemeColors,
-        typography = themeTypography
-    ) {
-        AppContent()
+fun JetnewsApp(
+    appContainer: AppContainer,
+    navigationViewModel: NavigationViewModel
+) {
+    JetnewsTheme {
+        AppContent(
+            navigationViewModel = navigationViewModel,
+            interestsRepository = appContainer.interestsRepository,
+            postsRepository = appContainer.postsRepository
+        )
     }
 }
 
 @Composable
-private fun AppContent() {
-    Crossfade(JetnewsStatus.currentScreen) { screen ->
-        Surface(color = MaterialTheme.colors().background) {
+private fun AppContent(
+    navigationViewModel: NavigationViewModel,
+    postsRepository: PostsRepository,
+    interestsRepository: InterestsRepository
+) {
+    Crossfade(navigationViewModel.currentScreen) { screen ->
+        Surface(color = MaterialTheme.colors.background) {
             when (screen) {
-                is Screen.Home -> HomeScreen()
-                is Screen.Interests -> InterestsScreen()
-                is Screen.Article -> ArticleScreen(postId = screen.postId)
+                is Screen.Home -> HomeScreen(
+                    navigateTo = navigationViewModel::navigateTo,
+                    postsRepository = postsRepository
+                )
+                is Screen.Interests -> InterestsScreen(
+                    navigateTo = navigationViewModel::navigateTo,
+                    interestsRepository = interestsRepository
+                )
+                is Screen.Article -> ArticleScreen(
+                    postId = screen.postId,
+                    postsRepository = postsRepository,
+                    onBack = { navigationViewModel.onBack() }
+                )
             }
         }
     }
@@ -69,49 +96,65 @@ private fun AppContent() {
 
 @Composable
 fun AppDrawer(
+    navigateTo: (Screen) -> Unit,
     currentScreen: Screen,
     closeDrawer: () -> Unit
 ) {
-    Column(modifier = LayoutSize.Fill) {
-        Spacer(LayoutHeight(24.dp))
-        Row(modifier = LayoutPadding(16.dp)) {
-            VectorImage(
-                id = R.drawable.ic_jetnews_logo,
-                tint = (MaterialTheme.colors()).primary
-            )
-            Spacer(LayoutWidth(8.dp))
-            VectorImage(id = R.drawable.ic_jetnews_wordmark)
-        }
-        Divider(color = Color(0x14333333))
+    Column(modifier = Modifier.fillMaxSize()) {
+        Spacer(Modifier.preferredHeight(24.dp))
+        JetNewsLogo(Modifier.padding(16.dp))
+        Divider(color = MaterialTheme.colors.onSurface.copy(alpha = .2f))
         DrawerButton(
-            icon = R.drawable.ic_home,
+            icon = Icons.Filled.Home,
             label = "Home",
-            isSelected = currentScreen == Screen.Home
-        ) {
-            navigateTo(Screen.Home)
-            closeDrawer()
-        }
+            isSelected = currentScreen == Screen.Home,
+            action = {
+                navigateTo(Screen.Home)
+                closeDrawer()
+            }
+        )
 
         DrawerButton(
-            icon = R.drawable.ic_interests,
+            icon = Icons.Filled.ListAlt,
             label = "Interests",
-            isSelected = currentScreen == Screen.Interests
-        ) {
-            navigateTo(Screen.Interests)
-            closeDrawer()
-        }
+            isSelected = currentScreen == Screen.Interests,
+            action = {
+                navigateTo(Screen.Interests)
+                closeDrawer()
+            }
+        )
+    }
+}
+
+@Composable
+private fun JetNewsLogo(modifier: Modifier = Modifier) {
+    Row(modifier = modifier) {
+        Image(
+            asset = vectorResource(R.drawable.ic_jetnews_logo),
+            colorFilter = ColorFilter.tint(MaterialTheme.colors.primary)
+        )
+        Spacer(Modifier.preferredWidth(8.dp))
+        Image(
+            asset = vectorResource(R.drawable.ic_jetnews_wordmark),
+            colorFilter = ColorFilter.tint(MaterialTheme.colors.onSurface)
+        )
     }
 }
 
 @Composable
 private fun DrawerButton(
-    modifier: Modifier = Modifier.None,
-    @DrawableRes icon: Int,
+    icon: VectorAsset,
     label: String,
     isSelected: Boolean,
-    action: () -> Unit
+    action: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val colors = MaterialTheme.colors()
+    val colors = MaterialTheme.colors
+    val imageAlpha = if (isSelected) {
+        1f
+    } else {
+        0.6f
+    }
     val textIconColor = if (isSelected) {
         colors.primary
     } else {
@@ -120,41 +163,63 @@ private fun DrawerButton(
     val backgroundColor = if (isSelected) {
         colors.primary.copy(alpha = 0.12f)
     } else {
-        colors.surface
+        Color.Transparent
     }
 
-    val surfaceModifier = modifier +
-            LayoutPadding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 0.dp) +
-            LayoutWidth.Fill
+    val surfaceModifier = modifier
+        .padding(start = 8.dp, top = 8.dp, end = 8.dp)
+        .fillMaxWidth()
     Surface(
         modifier = surfaceModifier,
         color = backgroundColor,
-        shape = RoundedCornerShape(4.dp)
+        shape = MaterialTheme.shapes.small
     ) {
-        TextButton(onClick = action, modifier = LayoutWidth.Fill) {
-            Row(arrangement = Arrangement.Start, modifier = LayoutWidth.Fill) {
-                VectorImage(
-                    modifier = LayoutGravity.Center,
-                    id = icon,
-                    tint = textIconColor
+        TextButton(
+            onClick = action,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.Start,
+                verticalGravity = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Image(
+                    asset = icon,
+                    colorFilter = ColorFilter.tint(textIconColor),
+                    alpha = imageAlpha
                 )
-                Spacer(LayoutWidth(16.dp))
+                Spacer(Modifier.preferredWidth(16.dp))
                 Text(
                     text = label,
-                    style = (MaterialTheme.typography()).body2.copy(
-                        color = textIconColor
-                    )
+                    style = MaterialTheme.typography.body2,
+                    color = textIconColor,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
     }
 }
 
-@Preview
+@Preview("Drawer contents")
 @Composable
 fun PreviewJetnewsApp() {
-    AppDrawer(
-        currentScreen = JetnewsStatus.currentScreen,
-        closeDrawer = { }
-    )
+    ThemedPreview {
+        AppDrawer(
+            navigateTo = { },
+            currentScreen = Screen.Home,
+            closeDrawer = { }
+        )
+    }
+}
+
+@Preview("Drawer contents dark theme")
+@Composable
+fun PreviewJetnewsAppDark() {
+    ThemedPreview(darkTheme = true) {
+        AppDrawer(
+            navigateTo = { },
+            currentScreen = Screen.Home,
+            closeDrawer = { }
+        )
+    }
 }

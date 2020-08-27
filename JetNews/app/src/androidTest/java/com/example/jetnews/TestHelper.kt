@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 Google, Inc.
+ * Copyright 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,51 +16,21 @@
 
 package com.example.jetnews
 
-import androidx.compose.Composable
-import androidx.ui.material.MaterialTheme
-import androidx.ui.material.surface.Surface
+import android.content.Context
+import androidx.compose.runtime.remember
+import androidx.lifecycle.SavedStateHandle
 import androidx.ui.test.ComposeTestRule
-import androidx.ui.test.SemanticsNodeInteraction
-import androidx.ui.test.findAll
-import androidx.ui.test.hasSubstring
 import com.example.jetnews.ui.JetnewsApp
-import com.example.jetnews.ui.JetnewsStatus
-import com.example.jetnews.ui.Screen
+import com.example.jetnews.ui.NavigationViewModel
 
 /**
  * Launches the app from a test context
  */
-fun ComposeTestRule.launchJetNewsApp() {
+fun ComposeTestRule.launchJetNewsApp(context: Context) {
     setContent {
-        JetnewsStatus.resetState()
-        JetnewsApp()
+        JetnewsApp(
+            TestAppContainer(context),
+            remember { NavigationViewModel(SavedStateHandle()) }
+        )
     }
-}
-
-/**
- * Resets the state of the app. Needs to be executed in Compose code (within a frame)
- */
-fun JetnewsStatus.resetState() {
-    currentScreen = Screen.Home
-    favorites.clear()
-    selectedTopics.clear()
-}
-
-/**
- * Helper method that can be used to test Jetnews UI Composables in isolation
- */
-fun ComposeTestRule.setMaterialContent(children: @Composable() () -> Unit) {
-    setContent {
-        MaterialTheme {
-            Surface {
-                children()
-            }
-        }
-    }
-}
-
-fun findAllBySubstring(text: String, ignoreCase: Boolean = false): List<SemanticsNodeInteraction> {
-    return findAll(
-        hasSubstring(text, ignoreCase)
-    )
 }

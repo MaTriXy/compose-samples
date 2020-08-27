@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 Google, Inc.
+ * Copyright 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,59 +16,42 @@
 
 package com.example.jetnews.ui.interests
 
-import androidx.compose.Composable
-import androidx.ui.core.Modifier
-import androidx.ui.foundation.Box
-import androidx.ui.foundation.contentColor
-import androidx.ui.foundation.shape.corner.CircleShape
-import androidx.ui.graphics.vector.DrawVector
-import androidx.ui.layout.LayoutPadding
-import androidx.ui.layout.LayoutSize
-import androidx.ui.material.ColorPalette
-import androidx.ui.material.MaterialTheme
-import androidx.ui.material.surface.Surface
-import androidx.ui.res.vectorResource
+import androidx.compose.foundation.Icon
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.preferredSize
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.EmphasisAmbient
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.ProvideEmphasis
+import androidx.compose.material.Surface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.ui.tooling.preview.Preview
-import androidx.ui.unit.dp
-import com.example.jetnews.R
-import com.example.jetnews.ui.darkThemeColors
-import com.example.jetnews.ui.lightThemeColors
+import com.example.jetnews.ui.ThemedPreview
 
 @Composable
 fun SelectTopicButton(
-    modifier: Modifier = Modifier.None,
+    modifier: Modifier = Modifier,
     selected: Boolean = false
 ) {
-    if (selected) {
-        SelectTopicButtonOn(modifier + LayoutSize(36.dp, 36.dp))
+    val icon = if (selected) Icons.Filled.Done else Icons.Filled.Add
+    val backgroundColor = if (selected) {
+        MaterialTheme.colors.primary
     } else {
-        SelectTopicButtonOff(modifier + LayoutSize(36.dp, 36.dp))
+        MaterialTheme.colors.onSurface.copy(alpha = 0.12f)
     }
-}
-
-@Composable
-private fun SelectTopicButtonOn(modifier: Modifier = Modifier.None) {
-    Box(
-        backgroundColor = MaterialTheme.colors().primary,
+    Surface(
+        color = backgroundColor,
         shape = CircleShape,
-        modifier = modifier
+        modifier = modifier.preferredSize(36.dp, 36.dp)
     ) {
-        DrawVector(vectorResource(R.drawable.ic_check))
-    }
-}
-
-@Composable
-private fun SelectTopicButtonOff(modifier: Modifier = Modifier.None) {
-    val borderColor = MaterialTheme.colors().onSurface.copy(alpha = 0.12f)
-    Box(
-        backgroundColor = borderColor,
-        shape = CircleShape,
-        modifier = modifier
-    ) {
-        DrawVector(
-            vectorImage = vectorResource(R.drawable.ic_add),
-            tintColor = contentColor()
-        )
+        ProvideEmphasis(EmphasisAmbient.current.high) {
+            Icon(icon)
+        }
     }
 }
 
@@ -76,8 +59,8 @@ private fun SelectTopicButtonOff(modifier: Modifier = Modifier.None) {
 @Composable
 fun SelectTopicButtonPreviewOff() {
     SelectTopicButtonPreviewTemplate(
-        lightThemeColors,
-        false
+        darkTheme = false,
+        selected = false
     )
 }
 
@@ -85,37 +68,38 @@ fun SelectTopicButtonPreviewOff() {
 @Composable
 fun SelectTopicButtonPreviewOn() {
     SelectTopicButtonPreviewTemplate(
-        lightThemeColors,
-        true
+        darkTheme = false,
+        selected = true
     )
 }
 
-@Preview("Off - Dark")
+@Preview("Off - dark theme")
 @Composable
 fun SelectTopicButtonPreviewOffDark() {
     SelectTopicButtonPreviewTemplate(
-        darkThemeColors,
-        false
+        darkTheme = true,
+        selected = false
     )
 }
 
-@Preview("On - Dark")
+@Preview("On - dark theme")
 @Composable
 fun SelectTopicButtonPreviewOnDark() {
     SelectTopicButtonPreviewTemplate(
-        darkThemeColors,
-        true
+        darkTheme = true,
+        selected = true
     )
 }
 
 @Composable
-private fun SelectTopicButtonPreviewTemplate(themeColors: ColorPalette, selected: Boolean) {
-    MaterialTheme(themeColors) {
-        Surface {
-            SelectTopicButton(
-                modifier = LayoutPadding(32.dp),
-                selected = selected
-            )
-        }
+private fun SelectTopicButtonPreviewTemplate(
+    darkTheme: Boolean = false,
+    selected: Boolean
+) {
+    ThemedPreview(darkTheme) {
+        SelectTopicButton(
+            modifier = Modifier.padding(32.dp),
+            selected = selected
+        )
     }
 }
