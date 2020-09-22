@@ -21,9 +21,9 @@ import androidx.compose.runtime.Providers
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.milliseconds
-import androidx.ui.test.android.createAndroidComposeRule
 import androidx.ui.test.assertIsDisplayed
 import androidx.ui.test.center
+import androidx.ui.test.createAndroidComposeRule
 import androidx.ui.test.onNodeWithLabel
 import androidx.ui.test.onNodeWithText
 import androidx.ui.test.performClick
@@ -74,14 +74,14 @@ class ConversationTest {
     @Test
     fun app_launches() {
         // Check that the conversation screen is visible on launch
-        onNodeWithText(activity.getString(R.string.textfield_hint)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(activity.getString(R.string.textfield_hint)).assertIsDisplayed()
     }
 
     @Test
     fun userScrollsUp_jumpToBottomAppears() {
         // Check list is snapped to bottom and swipe up
         findJumpToBottom().assertDoesNotExist()
-        onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
+        composeTestRule.onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
             this.swipe(
                 start = this.center,
                 end = Offset(this.center.x, this.center.y + 500),
@@ -95,7 +95,7 @@ class ConversationTest {
     @Test
     fun jumpToBottom_snapsToBottomAndDisappears() {
         // When the scroll is not snapped to the bottom
-        onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
+        composeTestRule.onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
             this.swipe(
                 start = this.center,
                 end = Offset(this.center.x, this.center.y + 500),
@@ -112,7 +112,7 @@ class ConversationTest {
     @Test
     fun jumpToBottom_snapsToBottomAfterUserInteracted() {
         // First swipe
-        onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
+        composeTestRule.onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
             this.swipe(
                 start = this.center,
                 end = Offset(this.center.x, this.center.y + 500),
@@ -132,7 +132,7 @@ class ConversationTest {
     @Test
     fun changeTheme_scrollIsPersisted() {
         // Swipe to show the jump to bottom button
-        onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
+        composeTestRule.onNodeWithLabel(activity.getString(R.string.conversation_desc)).performGesture {
             this.swipe(
                 start = this.center,
                 end = Offset(this.center.x, this.center.y + 500),
@@ -150,8 +150,9 @@ class ConversationTest {
         findJumpToBottom().assertIsDisplayed()
     }
 
-    private fun findJumpToBottom() = onNodeWithText(activity.getString(R.string.jumpBottom))
+    private fun findJumpToBottom() =
+        composeTestRule.onNodeWithText(activity.getString(R.string.jumpBottom))
 
     private fun openEmojiSelector() =
-        onNodeWithLabel(activity.getString(R.string.emoji_selector_bt_desc)).performClick()
+        composeTestRule.onNodeWithLabel(activity.getString(R.string.emoji_selector_bt_desc)).performClick()
 }
