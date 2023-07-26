@@ -20,19 +20,20 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Providers
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.onCommit
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticAmbientOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import com.example.jetsnack.ui.utils.SysUiController
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
-private val LightColorPalette = JetsnackColorPalette(
+private val LightColorPalette = JetsnackColors(
     brand = Shadow5,
+    brandSecondary = Ocean3,
     uiBackground = Neutral0,
     uiBorder = Neutral4,
     uiFloated = FunctionalGrey,
@@ -50,11 +51,14 @@ private val LightColorPalette = JetsnackColorPalette(
     gradient3_2 = listOf(Rose2, Lavender3, Rose4),
     gradient2_1 = listOf(Shadow4, Shadow11),
     gradient2_2 = listOf(Ocean3, Shadow3),
+    gradient2_3 = listOf(Lavender3, Rose2),
+    tornado1 = listOf(Shadow4, Ocean3),
     isDark = false
 )
 
-private val DarkColorPalette = JetsnackColorPalette(
+private val DarkColorPalette = JetsnackColors(
     brand = Shadow1,
+    brandSecondary = Ocean2,
     uiBackground = Neutral8,
     uiBorder = Neutral3,
     uiFloated = FunctionalDarkGrey,
@@ -73,7 +77,9 @@ private val DarkColorPalette = JetsnackColorPalette(
     gradient3_1 = listOf(Shadow9, Ocean7, Shadow5),
     gradient3_2 = listOf(Rose8, Lavender7, Rose11),
     gradient2_1 = listOf(Ocean3, Shadow3),
-    gradient2_2 = listOf(Ocean7, Shadow7),
+    gradient2_2 = listOf(Ocean4, Shadow2),
+    gradient2_3 = listOf(Lavender3, Rose3),
+    tornado1 = listOf(Shadow4, Ocean3),
     isDark = true
 )
 
@@ -84,8 +90,8 @@ fun JetsnackTheme(
 ) {
     val colors = if (darkTheme) DarkColorPalette else LightColorPalette
 
-    val sysUiController = SysUiController.current
-    onCommit(sysUiController, colors.uiBackground) {
+    val sysUiController = rememberSystemUiController()
+    SideEffect {
         sysUiController.setSystemBarsColor(
             color = colors.uiBackground.copy(alpha = AlphaNearOpaque)
         )
@@ -102,23 +108,25 @@ fun JetsnackTheme(
 }
 
 object JetsnackTheme {
-    @Composable
-    val colors: JetsnackColorPalette
-        get() = JetsnackColorAmbient.current
+    val colors: JetsnackColors
+        @Composable
+        get() = LocalJetsnackColors.current
 }
 
 /**
  * Jetsnack custom Color Palette
  */
 @Stable
-class JetsnackColorPalette(
+class JetsnackColors(
     gradient6_1: List<Color>,
     gradient6_2: List<Color>,
     gradient3_1: List<Color>,
     gradient3_2: List<Color>,
     gradient2_1: List<Color>,
     gradient2_2: List<Color>,
+    gradient2_3: List<Color>,
     brand: Color,
+    brandSecondary: Color,
     uiBackground: Color,
     uiBorder: Color,
     uiFloated: Color,
@@ -130,6 +138,7 @@ class JetsnackColorPalette(
     textHelp: Color,
     textInteractive: Color,
     textLink: Color,
+    tornado1: List<Color>,
     iconPrimary: Color = brand,
     iconSecondary: Color,
     iconInteractive: Color,
@@ -150,7 +159,11 @@ class JetsnackColorPalette(
         private set
     var gradient2_2 by mutableStateOf(gradient2_2)
         private set
+    var gradient2_3 by mutableStateOf(gradient2_3)
+        private set
     var brand by mutableStateOf(brand)
+        private set
+    var brandSecondary by mutableStateOf(brandSecondary)
         private set
     var uiBackground by mutableStateOf(uiBackground)
         private set
@@ -172,6 +185,8 @@ class JetsnackColorPalette(
         private set
     var textInteractive by mutableStateOf(textInteractive)
         private set
+    var tornado1 by mutableStateOf(tornado1)
+        private set
     var textLink by mutableStateOf(textLink)
         private set
     var iconPrimary by mutableStateOf(iconPrimary)
@@ -189,14 +204,16 @@ class JetsnackColorPalette(
     var isDark by mutableStateOf(isDark)
         private set
 
-    fun update(other: JetsnackColorPalette) {
+    fun update(other: JetsnackColors) {
         gradient6_1 = other.gradient6_1
         gradient6_2 = other.gradient6_2
         gradient3_1 = other.gradient3_1
         gradient3_2 = other.gradient3_2
         gradient2_1 = other.gradient2_1
         gradient2_2 = other.gradient2_2
+        gradient2_3 = other.gradient2_3
         brand = other.brand
+        brandSecondary = other.brandSecondary
         uiBackground = other.uiBackground
         uiBorder = other.uiBorder
         uiFloated = other.uiFloated
@@ -208,6 +225,7 @@ class JetsnackColorPalette(
         textHelp = other.textHelp
         textInteractive = other.textInteractive
         textLink = other.textLink
+        tornado1 = other.tornado1
         iconPrimary = other.iconPrimary
         iconSecondary = other.iconSecondary
         iconInteractive = other.iconInteractive
@@ -216,19 +234,54 @@ class JetsnackColorPalette(
         notificationBadge = other.notificationBadge
         isDark = other.isDark
     }
+
+    fun copy(): JetsnackColors = JetsnackColors(
+        gradient6_1 = gradient6_1,
+        gradient6_2 = gradient6_2,
+        gradient3_1 = gradient3_1,
+        gradient3_2 = gradient3_2,
+        gradient2_1 = gradient2_1,
+        gradient2_2 = gradient2_2,
+        gradient2_3 = gradient2_3,
+        brand = brand,
+        brandSecondary = brandSecondary,
+        uiBackground = uiBackground,
+        uiBorder = uiBorder,
+        uiFloated = uiFloated,
+        interactivePrimary = interactivePrimary,
+        interactiveSecondary = interactiveSecondary,
+        interactiveMask = interactiveMask,
+        textPrimary = textPrimary,
+        textSecondary = textSecondary,
+        textHelp = textHelp,
+        textInteractive = textInteractive,
+        textLink = textLink,
+        tornado1 = tornado1,
+        iconPrimary = iconPrimary,
+        iconSecondary = iconSecondary,
+        iconInteractive = iconInteractive,
+        iconInteractiveInactive = iconInteractiveInactive,
+        error = error,
+        notificationBadge = notificationBadge,
+        isDark = isDark,
+    )
 }
 
 @Composable
 fun ProvideJetsnackColors(
-    colors: JetsnackColorPalette,
+    colors: JetsnackColors,
     content: @Composable () -> Unit
 ) {
-    val colorPalette = remember { colors }
+    val colorPalette = remember {
+        // Explicitly creating a new object here so we don't mutate the initial [colors]
+        // provided, and overwrite the values set in it.
+        colors.copy()
+    }
     colorPalette.update(colors)
-    Providers(JetsnackColorAmbient provides colorPalette, children = content)
+    CompositionLocalProvider(LocalJetsnackColors provides colorPalette, content = content)
 }
 
-private val JetsnackColorAmbient = staticAmbientOf<JetsnackColorPalette> {
+private val LocalJetsnackColors = staticCompositionLocalOf<JetsnackColors> {
     error("No JetsnackColorPalette provided")
 }
 

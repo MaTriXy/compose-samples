@@ -26,12 +26,12 @@ import com.example.jetcaster.data.PodcastsRepository
 import com.example.jetcaster.data.room.JetcasterDatabase
 import com.example.jetcaster.data.room.TransactionRunner
 import com.rometools.rome.io.SyndFeedInput
+import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.LoggingEventListener
-import java.io.File
 
 /**
  * A very simple global singleton dependency graph.
@@ -40,15 +40,14 @@ import java.io.File
  */
 object Graph {
     lateinit var okHttpClient: OkHttpClient
-        private set
 
     lateinit var database: JetcasterDatabase
         private set
 
-    val transactionRunner: TransactionRunner
+    private val transactionRunner: TransactionRunner
         get() = database.transactionRunnerDao()
 
-    val syndFeedInput by lazy { SyndFeedInput() }
+    private val syndFeedInput by lazy { SyndFeedInput() }
 
     val podcastRepository by lazy {
         PodcastsRepository(
@@ -61,7 +60,7 @@ object Graph {
         )
     }
 
-    val podcastFetcher by lazy {
+    private val podcastFetcher by lazy {
         PodcastsFetcher(
             okHttpClient = okHttpClient,
             syndFeedInput = syndFeedInput,
@@ -92,15 +91,15 @@ object Graph {
         )
     }
 
-    val mainDispatcher: CoroutineDispatcher
+    private val mainDispatcher: CoroutineDispatcher
         get() = Dispatchers.Main
 
-    val ioDispatcher: CoroutineDispatcher
+    private val ioDispatcher: CoroutineDispatcher
         get() = Dispatchers.IO
 
     fun provide(context: Context) {
         okHttpClient = OkHttpClient.Builder()
-            .cache(Cache(File(context.cacheDir, "http_cache"), 20 * 1024 * 1024))
+            .cache(Cache(File(context.cacheDir, "http_cache"), (20 * 1024 * 1024).toLong()))
             .apply {
                 if (BuildConfig.DEBUG) eventListenerFactory(LoggingEventListener.Factory())
             }

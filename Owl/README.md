@@ -2,7 +2,8 @@
 
 This sample is a [Jetpack Compose][compose] implementation of [Owl][owl], a Material Design study.
 
-To try out these sample apps, you need to use the latest Canary version of Android Studio 4.2.
+To try out this sample app, use the latest stable version
+of [Android Studio](https://developer.android.com/studio).
 You can clone this repository or import the
 project from Android Studio following the steps
 [here](https://developer.android.com/jetpack/compose/setup#sample).
@@ -15,7 +16,7 @@ This sample showcases:
 
 ## Screenshots
 
-<img src="screenshots/owl.gif"/>
+<img src="screenshots/screenshots.png"/>
 
 ## Features
 
@@ -25,7 +26,7 @@ The onboarding screen allows users to customize their experience by selecting to
 * [Topic chip](app/src/main/java/com/example/owl/ui/onboarding/Onboarding.kt#L171) with custom [selection animation](app/src/main/java/com/example/owl/ui/onboarding/Onboarding.kt#L157).
 
 #### [Courses Screen](app/src/main/java/com/example/owl/ui/courses)
-The courses screen displays featured and saved course and a search screen. Notable fetures:
+The courses screen displays featured and saved course and a search screen. Notable features:
 * Custom [`StaggeredVerticalGrid`](app/src/main/java/com/example/owl/ui/courses/FeaturedCourses.kt#L161) responsive to available size.
 * [`FeaturedCourse`](app/src/main/java/com/example/owl/ui/courses/FeaturedCourses.kt#L70) composable demonstrates usage of [`ConstraintLayout`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/package-summary.html#ConstraintLayout(androidx.compose.ui.Modifier,%20kotlin.Function1)).
 
@@ -45,13 +46,14 @@ Compose makes it simple to create a library of components and use them throughou
 
 #### [Utilities](app/src/main/java/com/example/owl/ui/utils/)
 Owl implements some utility functions of interest:
-* [Window insets](https://goo.gle/compose-insets) will likely be provided by the Compose library at some point. Until then this demonstrates how it can be implemented.
-* [Navigation](app/src/main/java/com/example/owl/ui/utils/Navigation.kt): an implementation of [Android Architecture Components Navigation](https://developer.android.com/guide/navigation) will be provided for Compose at some point. Until then this class provides a simple [`Navigator`](app/src/main/java/com/example/owl/ui/utils/Navigation.kt#L32) with back-stack and a [`backHandler`](app/src/main/java/com/example/owl/ui/utils/Navigation.kt#L79) effect.
+* [Lazy layouts](https://developer.android.com/jetpack/compose/lists) - specifically LazyColumn and LazyRow, passing [item keys](https://developer.android.com/jetpack/compose/lists#item-keys) and using [`animateItemPlacement()`](https://developer.android.com/reference/kotlin/androidx/compose/foundation/lazy/LazyItemScope#(androidx.compose.ui.Modifier).animateItemPlacement(androidx.compose.animation.core.FiniteAnimationSpec)).
+* [Window insets](https://developer.android.com/reference/kotlin/androidx/compose/foundation/layout/WindowInsets) are provided by the Compose Foundation library.
+* [NavGraph](app/src/main/java/com/example/owl/ui/NavGraph.kt) models navigation within the app using [Jetpack Navigation](https://developer.android.com/jetpack/compose/navigation).
 
 ## Data
 Domain types are modelled in the [model package](app/src/main/java/com/example/owl/model), each containing static sample data exposed using fake `Repo`s objects.
 
-Imagery is sourced from [Unsplash](https://unsplash.com/) and [Pravatar](https://pravatar.cc/) and loaded using [coil-accompanist][coil-accompanist].
+Imagery is sourced from [Unsplash](https://unsplash.com/) and [Pravatar](https://pravatar.cc/) and loaded using [coil][coil].
 
 
 ## License
@@ -74,4 +76,4 @@ limitations under the License.
 [compose]: https://developer.android.com/jetpack/compose
 [owl]: https://material.io/design/material-studies/owl.html
 [materialtheming]: https://material.io/design/material-theming/overview.html#material-theming
-[coil-accompanist]: https://github.com/chrisbanes/accompanist
+[coil]: https://coil-kt.github.io/coil/

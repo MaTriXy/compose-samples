@@ -16,104 +16,138 @@
 
 package com.example.compose.jetsurvey.signinsignup
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.Text
-import androidx.compose.foundation.contentColor
+import android.content.res.Configuration.UI_MODE_NIGHT_NO
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Stack
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Snackbar
-import androidx.compose.material.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.launchInComposition
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.ExperimentalFocus
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.compose.jetsurvey.R
 import com.example.compose.jetsurvey.theme.JetsurveyTheme
-import com.example.compose.jetsurvey.theme.snackbarAction
-import kotlinx.coroutines.delay
+import com.example.compose.jetsurvey.util.supportWideScreen
+import kotlinx.coroutines.launch
 
-sealed class SignInEvent {
-    data class SignIn(val email: String, val password: String) : SignInEvent()
-    object SignUp : SignInEvent()
-    object SignInAsGuest : SignInEvent()
-    object NavigateBack : SignInEvent()
-}
-
+@OptIn(ExperimentalMaterial3Api::class) // Scaffold is experimental in m3
 @Composable
-fun SignIn(onNavigationEvent: (SignInEvent) -> Unit) {
-    val showSnackbar = remember { mutableStateOf(false) }
-    Stack(modifier = Modifier.fillMaxSize()) {
-        SignInSignUpScreen(
-            topAppBarText = stringResource(id = R.string.sign_in),
-            onSignedInAsGuest = { onNavigationEvent(SignInEvent.SignInAsGuest) },
-            onBackPressed = { onNavigationEvent(SignInEvent.NavigateBack) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                SignInContent(
-                    onSignInSubmitted = { email, password ->
-                        onNavigationEvent(SignInEvent.SignIn(email, password))
+fun SignInScreen(
+    email: String?,
+    onSignInSubmitted: (email: String, password: String) -> Unit,
+    onSignInAsGuest: () -> Unit,
+    onNavUp: () -> Unit,
+) {
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val snackbarErrorText = stringResource(id = R.string.feature_not_available)
+    val snackbarActionLabel = stringResource(id = R.string.dismiss)
+
+    Scaffold(
+        topBar = {
+            SignInSignUpTopAppBar(
+                topAppBarText = stringResource(id = R.string.sign_in),
+                onNavUp = onNavUp,
+            )
+        },
+        content = { contentPadding ->
+            SignInSignUpScreen(
+                modifier = Modifier.supportWideScreen(),
+                contentPadding = contentPadding,
+                onSignInAsGuest = onSignInAsGuest,
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    SignInContent(
+                        email = email,
+                        onSignInSubmitted = onSignInSubmitted,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = snackbarErrorText,
+                                    actionLabel = snackbarActionLabel
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = stringResource(id = R.string.forgot_password))
                     }
-                )
-                Spacer(modifier = Modifier.preferredHeight(16.dp))
-                TextButton(
-                    onClick = { showSnackbar.value = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(id = R.string.forgot_password))
                 }
             }
         }
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
         ErrorSnackbar(
-            showError = showSnackbar.value,
-            errorText = stringResource(id = R.string.feature_not_available),
-            onDismiss = { showSnackbar.value = false },
+            snackbarHostState = snackbarHostState,
+            onDismiss = { snackbarHostState.currentSnackbarData?.dismiss() },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
 
-@OptIn(ExperimentalFocus::class)
 @Composable
 fun SignInContent(
+    email: String?,
     onSignInSubmitted: (email: String, password: String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         val focusRequester = remember { FocusRequester() }
-        val emailState = remember { EmailState() }
+        val emailState by rememberSaveable(stateSaver = EmailStateSaver) {
+            mutableStateOf(EmailState(email))
+        }
         Email(emailState, onImeAction = { focusRequester.requestFocus() })
 
-        Spacer(modifier = Modifier.preferredHeight(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         val passwordState = remember { PasswordState() }
+
+        val onSubmit = {
+            if (emailState.isValid && passwordState.isValid) {
+                onSignInSubmitted(emailState.text, passwordState.text)
+            }
+        }
         Password(
             label = stringResource(id = R.string.password),
             passwordState = passwordState,
             modifier = Modifier.focusRequester(focusRequester),
-            onImeAction = { onSignInSubmitted(emailState.text, passwordState.text) }
+            onImeAction = { onSubmit() }
         )
-        Spacer(modifier = Modifier.preferredHeight(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
-            onClick = { onSignInSubmitted(emailState.text, passwordState.text) },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            enabled = emailState.isValid
+            onClick = { onSubmit() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            enabled = emailState.isValid && passwordState.isValid
         ) {
             Text(
                 text = stringResource(id = R.string.sign_in)
@@ -124,59 +158,49 @@ fun SignInContent(
 
 @Composable
 fun ErrorSnackbar(
-    showError: Boolean,
-    errorText: String,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit = { }
 ) {
-    if (!showError) {
-        return
-    }
-
-    // Make Snackbar disappear after 5 seconds if the user hasn't interacted with it
-    launchInComposition() {
-        delay(5000L)
-        onDismiss()
-    }
-
-    Box(modifier = modifier.fillMaxWidth().wrapContentHeight(Alignment.Bottom)) {
-        Crossfade(current = showError) {
+    SnackbarHost(
+        hostState = snackbarHostState,
+        snackbar = { data ->
             Snackbar(
                 modifier = Modifier.padding(16.dp),
-                text = {
+                content = {
                     Text(
-                        text = errorText,
-                        style = MaterialTheme.typography.body2
+                        text = data.visuals.message,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 },
                 action = {
-                    TextButton(
-                        onClick = onDismiss,
-                        contentColor = contentColor()
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.dismiss),
-                            color = MaterialTheme.colors.snackbarAction
-                        )
+                    data.visuals.actionLabel?.let {
+                        TextButton(onClick = onDismiss) {
+                            Text(
+                                text = stringResource(id = R.string.dismiss),
+                                color = MaterialTheme.colorScheme.inversePrimary
+                            )
+                        }
                     }
                 }
             )
-        }
-    }
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight(Alignment.Bottom)
+    )
 }
 
-@Preview(name = "Sign in light theme")
+@Preview(name = "Sign in light theme", uiMode = UI_MODE_NIGHT_NO)
+@Preview(name = "Sign in dark theme", uiMode = UI_MODE_NIGHT_YES)
 @Composable
 fun SignInPreview() {
     JetsurveyTheme {
-        SignIn {}
-    }
-}
-
-@Preview(name = "Sign in dark theme")
-@Composable
-fun SignInPreviewDark() {
-    JetsurveyTheme(darkTheme = true) {
-        SignIn {}
+        SignInScreen(
+            email = null,
+            onSignInSubmitted = { _, _ -> },
+            onSignInAsGuest = {},
+            onNavUp = {},
+        )
     }
 }

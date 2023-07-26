@@ -18,7 +18,7 @@ package com.example.jetcaster.util
 
 import android.content.Context
 import androidx.collection.LruCache
-import androidx.compose.animation.animate
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.material.MaterialTheme
@@ -30,10 +30,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ContextAmbient
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
-import coil.Coil
+import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import coil.size.Scale
@@ -42,7 +42,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun rememberDominantColorState(
-    context: Context = ContextAmbient.current,
+    context: Context = LocalContext.current,
     defaultColor: Color = MaterialTheme.colors.primary,
     defaultOnColor: Color = MaterialTheme.colors.onPrimary,
     cacheSize: Int = 12,
@@ -61,8 +61,14 @@ fun DynamicThemePrimaryColorsFromImage(
     content: @Composable () -> Unit
 ) {
     val colors = MaterialTheme.colors.copy(
-        primary = animate(dominantColorState.color, spring(stiffness = Spring.StiffnessLow)),
-        onPrimary = animate(dominantColorState.onColor, spring(stiffness = Spring.StiffnessLow))
+        primary = animateColorAsState(
+            dominantColorState.color,
+            spring(stiffness = Spring.StiffnessLow)
+        ).value,
+        onPrimary = animateColorAsState(
+            dominantColorState.onColor,
+            spring(stiffness = Spring.StiffnessLow)
+        ).value
     )
     MaterialTheme(colors = colors, content = content)
 }
@@ -140,21 +146,23 @@ class DominantColorState(
 private data class DominantColors(val color: Color, val onColor: Color)
 
 /**
- * Fetches the given [imageUrl] with [Coil], then uses [Palette] to calculate the dominant color.
+ * Fetches the given [imageUrl] with Coil, then uses [Palette] to calculate the dominant color.
  */
 private suspend fun calculateSwatchesInImage(
     context: Context,
     imageUrl: String
 ): List<Palette.Swatch> {
-    val r = ImageRequest.Builder(context)
+    val request = ImageRequest.Builder(context)
         .data(imageUrl)
         // We scale the image to cover 128px x 128px (i.e. min dimension == 128px)
         .size(128).scale(Scale.FILL)
         // Disable hardware bitmaps, since Palette uses Bitmap.getPixels()
         .allowHardware(false)
+        // Set a custom memory cache key to avoid overwriting the displayed image in the cache
+        .memoryCacheKey("$imageUrl.palette")
         .build()
 
-    val bitmap = when (val result = Coil.execute(r)) {
+    val bitmap = when (val result = context.imageLoader.execute(request)) {
         is SuccessResult -> result.drawable.toBitmap()
         else -> null
     }

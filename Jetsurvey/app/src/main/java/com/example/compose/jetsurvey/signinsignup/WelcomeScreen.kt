@@ -16,100 +16,84 @@
 
 package com.example.compose.jetsurvey.signinsignup
 
-import androidx.compose.animation.animate
+import android.content.res.Configuration.UI_MODE_NIGHT_NO
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offsetPx
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material.Button
-import androidx.compose.material.EmphasisAmbient
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideEmphasis
-import androidx.compose.material.Surface
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.LayoutModifier
-import androidx.compose.ui.Measurable
-import androidx.compose.ui.MeasureScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.boundsInParent
-import androidx.compose.ui.onPositioned
-import androidx.compose.ui.platform.DensityAmbient
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Constraints.Companion.Infinity
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.min
-import androidx.ui.tooling.preview.Preview
 import com.example.compose.jetsurvey.R
 import com.example.compose.jetsurvey.theme.JetsurveyTheme
-
-sealed class WelcomeEvent {
-    data class SignInSignUp(val email: String) : WelcomeEvent()
-    object SignInAsGuest : WelcomeEvent()
-}
+import com.example.compose.jetsurvey.theme.stronglyDeemphasizedAlpha
+import com.example.compose.jetsurvey.util.supportWideScreen
 
 @Composable
-fun WelcomeScreen(onEvent: (WelcomeEvent) -> Unit) {
-    var brandingBottom by remember { mutableStateOf(0f) }
+fun WelcomeScreen(
+    onSignInSignUp: (email: String) -> Unit,
+    onSignInAsGuest: () -> Unit,
+) {
     var showBranding by remember { mutableStateOf(true) }
-    var heightWithBranding by remember { mutableStateOf(0) }
 
-    val currentOffsetHolder = remember { mutableStateOf(0f) }
-    currentOffsetHolder.value = animate(
-        if (showBranding) 0f else -brandingBottom
-    )
-    val heightDp = with(DensityAmbient.current) { heightWithBranding.toDp() }
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = Modifier.supportWideScreen()) {
         Column(
-            modifier = Modifier.fillMaxWidth()
-                .brandingPreferredHeight(showBranding, heightDp)
-                .offsetPx(y = currentOffsetHolder)
-                .onPositioned {
-                    if (showBranding) {
-                        heightWithBranding = it.size.height
-                    }
-                }
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
         ) {
-            Branding(
-                modifier = Modifier.fillMaxWidth().weight(1f).onPositioned {
-                    if (brandingBottom == 0f) {
-                        brandingBottom = it.boundsInParent.bottom
-                    }
-                }
+            Spacer(
+                modifier = Modifier
+                    .weight(1f, fill = showBranding)
+                    .animateContentSize()
             )
+
+            AnimatedVisibility(
+                showBranding,
+                Modifier.fillMaxWidth()
+            ) {
+                Branding()
+            }
+
+            Spacer(
+                modifier = Modifier
+                    .weight(1f, fill = showBranding)
+                    .animateContentSize()
+            )
+
             SignInCreateAccount(
-                onEvent = onEvent,
+                onSignInSignUp = onSignInSignUp,
+                onSignInAsGuest = onSignInAsGuest,
                 onFocusChange = { focused -> showBranding = !focused },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
             )
         }
-    }
-}
-
-private fun Modifier.brandingPreferredHeight(
-    showBranding: Boolean,
-    heightDp: Dp
-): Modifier {
-    return if (!showBranding) {
-        Modifier
-            .noHeightConstraints()
-            .preferredHeight(heightDp)
-    } else {
-        Modifier
     }
 }
 
@@ -118,22 +102,26 @@ private fun Branding(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.wrapContentHeight(align = Alignment.CenterVertically)
     ) {
-        Logo(modifier = Modifier.align(Alignment.CenterHorizontally).padding(horizontal = 76.dp))
-        ProvideEmphasis(emphasis = EmphasisAmbient.current.high) {
-            Text(
-                text = stringResource(id = R.string.app_tagline),
-                style = MaterialTheme.typography.subtitle1,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 24.dp).fillMaxWidth()
-            )
-        }
+        Logo(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(horizontal = 76.dp)
+        )
+        Text(
+            text = stringResource(id = R.string.app_tagline),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(top = 24.dp)
+                .fillMaxWidth()
+        )
     }
 }
 
 @Composable
 private fun Logo(
-    lightTheme: Boolean = MaterialTheme.colors.isLight,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lightTheme: Boolean = LocalContentColor.current.luminance() < 0.5f,
 ) {
     val assetId = if (lightTheme) {
         R.drawable.ic_logo_light
@@ -141,30 +129,33 @@ private fun Logo(
         R.drawable.ic_logo_dark
     }
     Image(
-        asset = vectorResource(id = assetId),
-        modifier = modifier
+        painter = painterResource(id = assetId),
+        modifier = modifier,
+        contentDescription = null
     )
 }
 
 @Composable
 private fun SignInCreateAccount(
-    onEvent: (WelcomeEvent) -> Unit,
+    onSignInSignUp: (email: String) -> Unit,
+    onSignInAsGuest: () -> Unit,
     onFocusChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val emailState = remember { EmailState() }
+    val emailState by rememberSaveable(stateSaver = EmailStateSaver) {
+        mutableStateOf(EmailState())
+    }
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        ProvideEmphasis(emphasis = EmphasisAmbient.current.medium) {
-            Text(
-                text = stringResource(id = R.string.sign_in_create_account),
-                style = MaterialTheme.typography.subtitle2,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 24.dp)
-            )
-        }
+        Text(
+            text = stringResource(id = R.string.sign_in_create_account),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = stronglyDeemphasizedAlpha),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 64.dp, bottom = 12.dp)
+        )
         val onSubmit = {
             if (emailState.isValid) {
-                onEvent(WelcomeEvent.SignInSignUp(emailState.text))
+                onSignInSignUp(emailState.text)
             } else {
                 emailState.enableShowErrors()
             }
@@ -173,58 +164,30 @@ private fun SignInCreateAccount(
         Email(emailState = emailState, imeAction = ImeAction.Done, onImeAction = onSubmit)
         Button(
             onClick = onSubmit,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 28.dp, bottom = 3.dp)
         ) {
             Text(
                 text = stringResource(id = R.string.user_continue),
-                style = MaterialTheme.typography.subtitle2
+                style = MaterialTheme.typography.titleSmall
             )
         }
         OrSignInAsGuest(
-            onSignedInAsGuest = { onEvent(WelcomeEvent.SignInAsGuest) },
+            onSignInAsGuest = onSignInAsGuest,
             modifier = Modifier.fillMaxWidth()
         )
     }
 }
 
-fun Modifier.noHeightConstraints() = this then NoHeightConstraints
-
-/**
- * A modifier that removes any height constraints and positions the wrapped layout at
- * the top of the available space. This should be provided in Compose b/158559319
- */
-object NoHeightConstraints : LayoutModifier {
-    override fun MeasureScope.measure(
-        measurable: Measurable,
-        constraints: Constraints,
-    ): MeasureScope.MeasureResult {
-        val placeable = measurable.measure(
-            constraints.copy(
-                minHeight = 0,
-                maxHeight = Infinity
-            )
-        )
-        return layout(
-            placeable.width,
-            min(placeable.height.toDp(), constraints.maxHeight.dp).toIntPx()
-        ) {
-            placeable.place(0, 0)
-        }
-    }
-}
-
-@Preview(name = "Welcome light theme")
+@Preview(name = "Welcome light theme", uiMode = UI_MODE_NIGHT_YES)
+@Preview(name = "Welcome dark theme", uiMode = UI_MODE_NIGHT_NO)
 @Composable
 fun WelcomeScreenPreview() {
     JetsurveyTheme {
-        WelcomeScreen {}
-    }
-}
-
-@Preview(name = "Welcome dark theme")
-@Composable
-fun WelcomeScreenPreviewDark() {
-    JetsurveyTheme(darkTheme = true) {
-        WelcomeScreen {}
+        WelcomeScreen(
+            onSignInSignUp = {},
+            onSignInAsGuest = {},
+        )
     }
 }

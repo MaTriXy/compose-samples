@@ -17,11 +17,11 @@
 package com.example.owl.ui
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.platform.setContent
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
-            OwlApp(onBackPressedDispatcher)
+            OwlApp { finish() }
         }
     }
 }

@@ -16,100 +16,115 @@
 
 package com.example.compose.jetsurvey.signinsignup
 
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.Text
-import androidx.compose.foundation.currentTextStyle
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
-import androidx.compose.foundation.layout.preferredWidth
+import androidx.compose.foundation.layout.paddingFromBaseline
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.EmphasisAmbient
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.ProvideEmphasis
-import androidx.compose.material.Surface
-import androidx.compose.material.TopAppBar
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.ExperimentalFocus
-import androidx.compose.ui.focus.FocusState
-import androidx.compose.ui.focusObserver
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.compose.jetsurvey.R
+import com.example.compose.jetsurvey.theme.JetsurveyTheme
+import com.example.compose.jetsurvey.theme.stronglyDeemphasizedAlpha
 
 @Composable
 fun SignInSignUpScreen(
-    topAppBarText: String,
-    onSignedInAsGuest: () -> Unit,
-    onBackPressed: () -> Unit,
+    onSignInAsGuest: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable() () -> Unit
+    contentPadding: PaddingValues = PaddingValues(),
+    content: @Composable () -> Unit
 ) {
-    Column(modifier = modifier) {
-        SignInSignUpTopAppBar(topAppBarText, onBackPressed)
-        ScrollableColumn {
-            Spacer(modifier = Modifier.preferredHeight(44.dp))
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
+        item {
+            Spacer(modifier = Modifier.height(44.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+            ) {
                 content()
             }
-            Spacer(modifier = Modifier.preferredHeight(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             OrSignInAsGuest(
-                onSignedInAsGuest = onSignedInAsGuest,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                onSignInAsGuest = onSignInAsGuest,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class) // CenterAlignedTopAppBar is experimental in m3
 @Composable
-private fun SignInSignUpTopAppBar(topAppBarText: String, onBackPressed: () -> Unit) {
-    TopAppBar(
+fun SignInSignUpTopAppBar(
+    topAppBarText: String,
+    onNavUp: () -> Unit
+) {
+    CenterAlignedTopAppBar(
         title = {
             Text(
                 text = topAppBarText,
-                textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxSize()
                     .wrapContentSize(Alignment.Center)
             )
         },
         navigationIcon = {
-            IconButton(onClick = onBackPressed) {
-                Icon(Icons.Filled.ChevronLeft)
+            IconButton(onClick = onNavUp) {
+                Icon(
+                    imageVector = Icons.Filled.ChevronLeft,
+                    contentDescription = stringResource(id = R.string.back),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         },
         // We need to balance the navigation icon, so we add a spacer.
         actions = {
-            Spacer(modifier = Modifier.preferredWidth(68.dp))
+            Spacer(modifier = Modifier.width(68.dp))
         },
-        backgroundColor = MaterialTheme.colors.surface,
-        elevation = 0.dp
     )
 }
 
-@OptIn(ExperimentalFocus::class)
+@OptIn(ExperimentalMaterial3Api::class) // OutlinedTextField is experimental in m3
 @Composable
 fun Email(
     emailState: TextFieldState = remember { EmailState() },
@@ -122,34 +137,36 @@ fun Email(
             emailState.text = it
         },
         label = {
-            ProvideEmphasis(emphasis = EmphasisAmbient.current.medium) {
-                Text(
-                    text = stringResource(id = R.string.email),
-                    style = MaterialTheme.typography.body2
-                )
-            }
+            Text(
+                text = stringResource(id = R.string.email),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         },
-        modifier = Modifier.fillMaxWidth().focusObserver { focusState ->
-            val focused = focusState == FocusState.Active
-            emailState.onFocusChange(focused)
-            if (!focused) {
-                emailState.enableShowErrors()
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                emailState.onFocusChange(focusState.isFocused)
+                if (!focusState.isFocused) {
+                    emailState.enableShowErrors()
+                }
+            },
+        textStyle = MaterialTheme.typography.bodyMedium,
+        isError = emailState.showErrors(),
+        keyboardOptions = KeyboardOptions.Default.copy(
+            imeAction = imeAction,
+            keyboardType = KeyboardType.Email
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onImeAction()
             }
-        },
-        textStyle = MaterialTheme.typography.body2,
-        isErrorValue = emailState.showErrors(),
-        imeAction = imeAction,
-        onImeActionPerformed = { action, softKeyboardController ->
-            if (action == ImeAction.Done) {
-                softKeyboardController?.hideSoftwareKeyboard()
-            }
-            onImeAction()
-        }
+        ),
     )
 
     emailState.getError()?.let { error -> TextFieldError(textError = error) }
 }
 
+@OptIn(ExperimentalMaterial3Api::class) // OutlinedTextField is experimental in m3
 @Composable
 fun Password(
     label: String,
@@ -158,31 +175,42 @@ fun Password(
     imeAction: ImeAction = ImeAction.Done,
     onImeAction: () -> Unit = {}
 ) {
-    val showPassword = remember { mutableStateOf(false) }
+    val showPassword = rememberSaveable { mutableStateOf(false) }
     OutlinedTextField(
         value = passwordState.text,
         onValueChange = {
             passwordState.text = it
             passwordState.enableShowErrors()
         },
-        modifier = modifier.fillMaxWidth(),
-        textStyle = MaterialTheme.typography.body2,
+        modifier = modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                passwordState.onFocusChange(focusState.isFocused)
+                if (!focusState.isFocused) {
+                    passwordState.enableShowErrors()
+                }
+            },
+        textStyle = MaterialTheme.typography.bodyMedium,
         label = {
-            ProvideEmphasis(emphasis = EmphasisAmbient.current.medium) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.body2
-                )
-            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         },
         trailingIcon = {
             if (showPassword.value) {
                 IconButton(onClick = { showPassword.value = false }) {
-                    Icon(asset = Icons.Filled.Visibility)
+                    Icon(
+                        imageVector = Icons.Filled.Visibility,
+                        contentDescription = stringResource(id = R.string.hide_password)
+                    )
                 }
             } else {
                 IconButton(onClick = { showPassword.value = true }) {
-                    Icon(asset = Icons.Filled.VisibilityOff)
+                    Icon(
+                        imageVector = Icons.Filled.VisibilityOff,
+                        contentDescription = stringResource(id = R.string.show_password)
+                    )
                 }
             }
         },
@@ -191,17 +219,20 @@ fun Password(
         } else {
             PasswordVisualTransformation()
         },
-        isErrorValue = passwordState.showErrors(),
-        imeAction = imeAction,
-        onImeActionPerformed = { action, softKeyboardController ->
-            if (action == ImeAction.Done) {
-                softKeyboardController?.hideSoftwareKeyboard()
+        isError = passwordState.showErrors(),
+        supportingText = {
+            passwordState.getError()?.let { error -> TextFieldError(textError = error) }
+        },
+        keyboardOptions = KeyboardOptions.Default.copy(
+            imeAction = imeAction,
+            keyboardType = KeyboardType.Password
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onImeAction()
             }
-            onImeAction()
-        }
+        ),
     )
-
-    passwordState.getError()?.let { error -> TextFieldError(textError = error) }
 }
 
 /**
@@ -210,35 +241,35 @@ fun Password(
 @Composable
 fun TextFieldError(textError: String) {
     Row(modifier = Modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.preferredWidth(16.dp))
+        Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = textError,
             modifier = Modifier.fillMaxWidth(),
-            style = currentTextStyle().copy(color = MaterialTheme.colors.error)
+            color = MaterialTheme.colorScheme.error
         )
     }
 }
 
 @Composable
 fun OrSignInAsGuest(
-    onSignedInAsGuest: () -> Unit,
+    onSignInAsGuest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Surface {
-            ProvideEmphasis(emphasis = EmphasisAmbient.current.medium) {
-                Text(
-                    text = stringResource(id = R.string.or),
-                    style = MaterialTheme.typography.subtitle2
-                )
-            }
-        }
+        Text(
+            text = stringResource(id = R.string.or),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = stronglyDeemphasizedAlpha),
+            modifier = Modifier.paddingFromBaseline(top = 25.dp)
+        )
         OutlinedButton(
-            onClick = onSignedInAsGuest,
-            modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 24.dp)
+            onClick = onSignInAsGuest,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp, bottom = 24.dp),
         ) {
             Text(text = stringResource(id = R.string.sign_in_guest))
         }
@@ -248,10 +279,12 @@ fun OrSignInAsGuest(
 @Preview
 @Composable
 fun SignInSignUpScreenPreview() {
-    SignInSignUpScreen(
-        topAppBarText = "Preview",
-        onSignedInAsGuest = {},
-        onBackPressed = {},
-        content = {}
-    )
+    JetsurveyTheme {
+        Surface {
+            SignInSignUpScreen(
+                onSignInAsGuest = {},
+                content = {}
+            )
+        }
+    }
 }

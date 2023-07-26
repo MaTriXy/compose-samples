@@ -16,27 +16,45 @@
 
 package androidx.compose.samples.crane.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.EaseIn
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.BackdropScaffold
 import androidx.compose.material.BackdropValue
-import androidx.compose.material.DrawerValue
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ModalDrawerLayout
-import androidx.compose.material.rememberBackdropState
-import androidx.compose.material.rememberDrawerState
+import androidx.compose.material.Scaffold
+import androidx.compose.material.rememberBackdropScaffoldState
+import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.samples.crane.R
 import androidx.compose.samples.crane.base.CraneDrawer
 import androidx.compose.samples.crane.base.CraneTabBar
 import androidx.compose.samples.crane.base.CraneTabs
 import androidx.compose.samples.crane.base.ExploreSection
 import androidx.compose.samples.crane.data.ExploreModel
+import androidx.compose.samples.crane.ui.BottomSheetShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.viewinterop.viewModel
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 typealias OnExploreItemClicked = (ExploreModel) -> Unit
 
@@ -46,80 +64,115 @@ enum class CraneScreen {
 
 @Composable
 fun CraneHome(
+    widthSize: WindowWidthSizeClass,
     onExploreItemClicked: OnExploreItemClicked,
     onDateSelectionClicked: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: MainViewModel
 ) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    ModalDrawerLayout(
-        drawerState = drawerState,
-        gesturesEnabled = drawerState.isOpen,
-        drawerContent = { CraneDrawer() },
-        bodyContent = {
-            CraneHomeContent(
-                modifier = modifier,
-                onExploreItemClicked = onExploreItemClicked,
-                onDateSelectionClicked = onDateSelectionClicked,
-                openDrawer = { drawerState.open() }
-            )
+    val scaffoldState = rememberScaffoldState()
+    Scaffold(
+        scaffoldState = scaffoldState,
+        modifier = Modifier.statusBarsPadding(),
+        drawerContent = {
+            CraneDrawer()
         }
-    )
+    ) { contentPadding ->
+        val scope = rememberCoroutineScope()
+        CraneHomeContent(
+            modifier = modifier.padding(contentPadding),
+            widthSize = widthSize,
+            onExploreItemClicked = onExploreItemClicked,
+            onDateSelectionClicked = onDateSelectionClicked,
+            openDrawer = {
+                scope.launch {
+                    scaffoldState.drawerState.open()
+                }
+            },
+            viewModel = viewModel
+        )
+    }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(
+    ExperimentalMaterialApi::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 fun CraneHomeContent(
+    widthSize: WindowWidthSizeClass,
     onExploreItemClicked: OnExploreItemClicked,
     onDateSelectionClicked: () -> Unit,
     openDrawer: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: MainViewModel
 ) {
-    val viewModel: MainViewModel = viewModel()
     val suggestedDestinations by viewModel.suggestedDestinations.observeAsState()
 
     val onPeopleChanged: (Int) -> Unit = { viewModel.updatePeople(it) }
-    var tabSelected by remember { mutableStateOf(CraneScreen.Fly) }
+    val craneScreenValues = CraneScreen.values()
+    val pagerState =
+        rememberPagerState(initialPage = CraneScreen.Fly.ordinal) { craneScreenValues.size }
 
+    val coroutineScope = rememberCoroutineScope()
     BackdropScaffold(
         modifier = modifier,
-        backdropScaffoldState = rememberBackdropState(BackdropValue.Revealed),
-        frontLayerScrimColor = Color.Transparent,
+        scaffoldState = rememberBackdropScaffoldState(BackdropValue.Revealed),
+        frontLayerShape = BottomSheetShape,
+        frontLayerScrimColor = Color.Unspecified,
         appBar = {
-            HomeTabBar(openDrawer, tabSelected, onTabSelected = { tabSelected = it })
+            HomeTabBar(openDrawer, craneScreenValues[pagerState.currentPage], onTabSelected = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(
+                        it.ordinal,
+                        animationSpec = tween(
+                            TAB_SWITCH_ANIM_DURATION
+                        )
+                    )
+                }
+            })
         },
         backLayerContent = {
             SearchContent(
-                tabSelected,
-                viewModel,
-                onPeopleChanged,
-                onDateSelectionClicked,
-                onExploreItemClicked
+                widthSize = widthSize,
+                tabSelected = craneScreenValues[pagerState.currentPage],
+                viewModel = viewModel,
+                onPeopleChanged = onPeopleChanged,
+                onDateSelectionClicked = onDateSelectionClicked,
+                onExploreItemClicked = onExploreItemClicked
             )
         },
         frontLayerContent = {
-            when (tabSelected) {
-                CraneScreen.Fly -> {
-                    suggestedDestinations?.let { destinations ->
+            HorizontalPager(state = pagerState) { page ->
+                when (craneScreenValues[page]) {
+                    CraneScreen.Fly -> {
+                        suggestedDestinations?.let { destinations ->
+                            ExploreSection(
+                                widthSize = widthSize,
+                                title = stringResource(R.string.explore_flights_by_destination),
+                                exploreList = destinations,
+                                onItemClicked = onExploreItemClicked
+                            )
+                        }
+                    }
+
+                    CraneScreen.Sleep -> {
                         ExploreSection(
-                            title = "Explore Flights by Destination",
-                            exploreList = destinations,
+                            widthSize = widthSize,
+                            title = stringResource(R.string.explore_properties_by_destination),
+                            exploreList = viewModel.hotels,
                             onItemClicked = onExploreItemClicked
                         )
                     }
-                }
-                CraneScreen.Sleep -> {
-                    ExploreSection(
-                        title = "Explore Properties by Destination",
-                        exploreList = viewModel.hotels,
-                        onItemClicked = onExploreItemClicked
-                    )
-                }
-                CraneScreen.Eat -> {
-                    ExploreSection(
-                        title = "Explore Restaurants by Destination",
-                        exploreList = viewModel.restaurants,
-                        onItemClicked = onExploreItemClicked
-                    )
+
+                    CraneScreen.Eat -> {
+                        ExploreSection(
+                            widthSize = widthSize,
+                            title = stringResource(R.string.explore_restaurants_by_destination),
+                            exploreList = viewModel.restaurants,
+                            onItemClicked = onExploreItemClicked
+                        )
+                    }
                 }
             }
         }
@@ -134,7 +187,9 @@ private fun HomeTabBar(
     modifier: Modifier = Modifier
 ) {
     CraneTabBar(
-        modifier = modifier,
+        modifier = modifier
+            .wrapContentWidth()
+            .sizeIn(maxWidth = 500.dp),
         onMenuClicked = openDrawer
     ) { tabBarModifier ->
         CraneTabs(
@@ -146,37 +201,70 @@ private fun HomeTabBar(
     }
 }
 
+private const val TAB_SWITCH_ANIM_DURATION = 300
+
 @Composable
 private fun SearchContent(
+    widthSize: WindowWidthSizeClass,
     tabSelected: CraneScreen,
     viewModel: MainViewModel,
     onPeopleChanged: (Int) -> Unit,
     onDateSelectionClicked: () -> Unit,
     onExploreItemClicked: OnExploreItemClicked
 ) {
-    when (tabSelected) {
-        CraneScreen.Fly -> FlySearchContent(
-            searchUpdates = FlySearchContentUpdates(
-                onPeopleChanged = onPeopleChanged,
-                onToDestinationChanged = { viewModel.toDestinationChanged(it) },
-                onDateSelectionClicked = onDateSelectionClicked,
-                onExploreItemClicked = onExploreItemClicked
+    // Reading datesSelected State from here instead of passing the String from the ViewModel
+    // to cause a recomposition when the dates change.
+    val selectedDates = viewModel.calendarState.calendarUiState.value.selectedDatesFormatted
+    AnimatedContent(
+        targetState = tabSelected,
+        transitionSpec = {
+            fadeIn(
+                animationSpec = tween(TAB_SWITCH_ANIM_DURATION, easing = EaseIn)
+            ).togetherWith(
+                fadeOut(
+                    animationSpec = tween(TAB_SWITCH_ANIM_DURATION, easing = EaseOut)
+                )
+            ).using(
+                SizeTransform(
+                    sizeAnimationSpec = { _, _ ->
+                        tween(TAB_SWITCH_ANIM_DURATION, easing = EaseInOut)
+                    }
+                )
             )
-        )
-        CraneScreen.Sleep -> SleepSearchContent(
-            sleepUpdates = SleepSearchContentUpdates(
-                onPeopleChanged = onPeopleChanged,
-                onDateSelectionClicked = onDateSelectionClicked,
-                onExploreItemClicked = onExploreItemClicked
+        },
+    ) { targetState ->
+        when (targetState) {
+            CraneScreen.Fly -> FlySearchContent(
+                widthSize = widthSize,
+                datesSelected = selectedDates,
+                searchUpdates = FlySearchContentUpdates(
+                    onPeopleChanged = onPeopleChanged,
+                    onToDestinationChanged = { viewModel.toDestinationChanged(it) },
+                    onDateSelectionClicked = onDateSelectionClicked,
+                    onExploreItemClicked = onExploreItemClicked
+                )
             )
-        )
-        CraneScreen.Eat -> EatSearchContent(
-            eatUpdates = EatSearchContentUpdates(
-                onPeopleChanged = onPeopleChanged,
-                onDateSelectionClicked = onDateSelectionClicked,
-                onExploreItemClicked = onExploreItemClicked
+
+            CraneScreen.Sleep -> SleepSearchContent(
+                widthSize = widthSize,
+                datesSelected = selectedDates,
+                sleepUpdates = SleepSearchContentUpdates(
+                    onPeopleChanged = onPeopleChanged,
+                    onDateSelectionClicked = onDateSelectionClicked,
+                    onExploreItemClicked = onExploreItemClicked
+                )
             )
-        )
+
+            CraneScreen.Eat -> EatSearchContent(
+                widthSize = widthSize,
+                datesSelected = selectedDates,
+                eatUpdates = EatSearchContentUpdates(
+                    onPeopleChanged = onPeopleChanged,
+                    onDateSelectionClicked = onDateSelectionClicked,
+                    onExploreItemClicked = onExploreItemClicked
+                )
+            )
+        }
     }
 }
 

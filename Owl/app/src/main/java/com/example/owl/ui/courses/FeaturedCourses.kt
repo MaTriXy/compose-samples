@@ -16,34 +16,40 @@
 
 package com.example.owl.ui.courses
 
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.ConstraintLayout
-import androidx.compose.foundation.layout.ExperimentalLayout
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Icon
+import androidx.compose.material.LocalElevationOverlay
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Layout
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
+import androidx.constraintlayout.compose.ConstraintLayout
+import com.example.owl.R
 import com.example.owl.model.Course
 import com.example.owl.model.courses
 import com.example.owl.ui.common.OutlinedAvatar
 import com.example.owl.ui.theme.BlueTheme
 import com.example.owl.ui.theme.OwlTheme
-import com.example.owl.ui.theme.elevatedSurface
 import com.example.owl.ui.utils.NetworkImage
-import com.example.owl.ui.utils.statusBarsPadding
+import java.util.Locale
 import kotlin.math.ceil
 
 @Composable
@@ -52,7 +58,11 @@ fun FeaturedCourses(
     selectCourse: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ScrollableColumn(modifier = modifier.statusBarsPadding()) {
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .statusBarsPadding()
+    ) {
         CoursesAppBar()
         StaggeredVerticalGrid(
             maxColumnWidth = 220.dp,
@@ -65,7 +75,6 @@ fun FeaturedCourses(
     }
 }
 
-@OptIn(ExperimentalLayout::class)
 @Composable
 fun FeaturedCourse(
     course: Course,
@@ -78,14 +87,20 @@ fun FeaturedCourse(
         elevation = OwlTheme.elevations.card,
         shape = MaterialTheme.shapes.medium
     ) {
+        val featuredString = stringResource(id = R.string.featured)
         ConstraintLayout(
-            modifier = Modifier.clickable(
-                onClick = { selectCourse(course.id) }
-            )
+            modifier = Modifier
+                .clickable(
+                    onClick = { selectCourse(course.id) }
+                )
+                .semantics {
+                    contentDescription = featuredString
+                }
         ) {
             val (image, avatar, subject, name, steps, icon) = createRefs()
             NetworkImage(
                 url = course.thumbUrl,
+                contentDescription = null,
                 modifier = Modifier
                     .aspectRatio(4f / 3f)
                     .constrainAs(image) {
@@ -93,20 +108,22 @@ fun FeaturedCourse(
                         top.linkTo(parent.top)
                     }
             )
+            val outlineColor = LocalElevationOverlay.current?.apply(
+                color = MaterialTheme.colors.surface,
+                elevation = OwlTheme.elevations.card
+            ) ?: MaterialTheme.colors.surface
             OutlinedAvatar(
                 url = course.instructor,
-                outlineColor = MaterialTheme.colors.elevatedSurface(
-                    OwlTheme.elevations.card
-                ),
+                outlineColor = outlineColor,
                 modifier = Modifier
-                    .preferredSize(38.dp)
+                    .size(38.dp)
                     .constrainAs(avatar) {
                         centerHorizontallyTo(parent)
                         centerAround(image.bottom)
                     }
             )
             Text(
-                text = course.subject.toUpperCase(),
+                text = course.subject.uppercase(Locale.getDefault()),
                 color = MaterialTheme.colors.primary,
                 style = MaterialTheme.typography.overline,
                 modifier = Modifier
@@ -129,10 +146,11 @@ fun FeaturedCourse(
             )
             val center = createGuidelineFromStart(0.5f)
             Icon(
-                asset = Icons.Rounded.OndemandVideo,
+                imageVector = Icons.Rounded.OndemandVideo,
                 tint = MaterialTheme.colors.primary,
+                contentDescription = null,
                 modifier = Modifier
-                    .preferredSize(16.dp)
+                    .size(16.dp)
                     .constrainAs(icon) {
                         end.linkTo(center)
                         centerVerticallyTo(steps)
@@ -161,10 +179,10 @@ fun FeaturedCourse(
 fun StaggeredVerticalGrid(
     modifier: Modifier = Modifier,
     maxColumnWidth: Dp,
-    children: @Composable () -> Unit
+    content: @Composable () -> Unit
 ) {
     Layout(
-        children = children,
+        content = content,
         modifier = modifier
     ) { measurables, constraints ->
         check(constraints.hasBoundedWidth) {

@@ -16,26 +16,34 @@
 
 package androidx.compose.samples.crane.home
 
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.ContentGravity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.launchInComposition
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.samples.crane.R
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.delay
 
 private const val SplashWaitTime: Long = 2000
 
 @Composable
 fun LandingScreen(modifier: Modifier = Modifier, onTimeout: () -> Unit) {
-    Box(modifier = modifier.fillMaxSize(), gravity = ContentGravity.Center) {
-        launchInComposition {
-            delay(SplashWaitTime)
-            onTimeout()
-        }
-        Image(asset = vectorResource(id = R.drawable.ic_crane_drawer))
+    // Adds composition consistency. Use the value when LaunchedEffect is first called
+    val currentOnTimeout by rememberUpdatedState(onTimeout)
+
+    LaunchedEffect(Unit) {
+        delay(SplashWaitTime)
+        currentOnTimeout()
     }
+    Image(
+        painterResource(id = R.drawable.ic_crane_drawer),
+        contentDescription = null,
+        modifier
+            .fillMaxSize()
+            .wrapContentSize()
+    )
 }

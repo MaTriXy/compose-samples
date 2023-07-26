@@ -5,14 +5,15 @@ Studies built with [Jetpack Compose](https://developer.android.com/jetpack/compo
 The goal of the sample is to showcase Material components, draggable UI elements, Android Views
 inside Compose, and UI state handling.
 
-To try out this sample app, you need to use the latest Canary version of Android Studio 4.2.
+To try out this sample app, use the latest stable version
+of [Android Studio](https://developer.android.com/studio).
 You can clone this repository or import the
 project from Android Studio following the steps
 [here](https://developer.android.com/jetpack/compose/setup#sample).
 
 ## Screenshots
 
-<img src="screenshots/crane.gif"/>
+<img src="screenshots/screenshots.png"/>
 
 ## Features
 
@@ -22,8 +23,6 @@ the bottom of the screen.
 - __Home__ [screen][home] where you can explore flights, hotels, and restaurants specifying
 the number of people.
  - Clicking on the number of people refreshes the destinations.
- - The [backdrop](https://material.io/components/backdrop) is draggable and can pin to the top of
- the screen, just under the search criteria, and to the bottom. Implemented [here][backdrop].
  - Destination's images are retrieved using the [coil-accompanist][coil-accompanist] library.
 - __Calendar__ [screen][calendar]. Tapping on __Select Dates__ takes you to a calendar built
 completely from scratch. It makes a heavy usage of Compose's state APIs.
@@ -32,6 +31,43 @@ implemented using a different Activity will be displayed. In there, you can see 
 embedded in Compose and Compose buttons updating the Android View. Notice how you can also
 interact with the `MapView` seamlessly.
 
+Crane is a multi-activity app that showcases how navigating between activities can be done in
+Jetpack Compose.
+
+## Hilt
+
+Crane uses [Hilt][hilt] to manage its dependencies. Hilt's ViewModel (with the
+`@HiltViewModel` annotation) works perfectly with Compose's ViewModel integration (`viewModel()`
+composable function) as you can see in the following snippet of code. `viewModel()` will
+automatically use the factory that Hilt creates for the ViewModel:
+
+```
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val destinationsRepository: DestinationsRepository,
+    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+    datesRepository: DatesRepository
+) : ViewModel() { ... }
+
+@Composable
+fun CraneHomeContent(
+    viewModel: MainViewModel = viewModel()
+) {
+    ...
+}
+```
+
+Disclaimer: Passing dependencies to a ViewModel which are not available at compile time (which is
+sometimes called _assisted injection_) doesn't work as you might expect using `viewModel()`.
+Compose's ViewModel integration cannot currently scope a ViewModel to a given composable. Instead
+it is always scoped to the host Activity or Fragment. This means that calling `viewModel()` with
+different factories in the same host Activity/Fragment don't have the desired effect; the _first_
+factory will be always used.
+
+This is the case of the [DetailsViewModel](/app/src/main/java/androidx/compose/samples/crane/details/DetailsViewModel.kt), which takes the name of
+a `City` as a parameter to load the required information for the screen. However, the above isn't a
+problem in this sample, since `DetailsScreen` is always used in it's own newly launched Activity.
+
 ## Google Maps SDK
 
 To get the MapView working, you need to get an API key as
@@ -39,14 +75,15 @@ the [documentation says](https://developers.google.com/maps/documentation/androi
 and include it in the `local.properties` file as follows:
 
 ```
-google.maps.key={insert_your_api_key_here}
+MAPS_API_KEY=insert_your_api_key_here
 ```
 
-## Data
+When restricting the Key to Android apps, use `androidx.compose.samples.crane` as package name, and
+`A0:BD:B3:B6:F0:C4:BE:90:C6:9D:5F:4C:1D:F0:90:80:7F:D7:FE:1F` as SHA-1 certificate fingerprint.
 
-The data is hardcoded in the _CraneData_ [file][data] and exposed to the UI using the
-[MainViewModel][mainViewModel]. Image resources are retrieved from
-[Unsplash](https://unsplash.com/).
+## Images
+
+Image resources are retrieved from [Unsplash](https://unsplash.com/).
 
 ## Testing
 
@@ -74,11 +111,11 @@ limitations under the License.
 
 [landing]: app/src/main/java/androidx/compose/samples/crane/home/LandingScreen.kt
 [home]: app/src/main/java/androidx/compose/samples/crane/home/CraneHome.kt
-[backdrop]: app/src/main/java/androidx/compose/samples/crane/ui/BackdropFrontLayer.kt
 [calendar]: app/src/main/java/androidx/compose/samples/crane/calendar/Calendar.kt
 [details]: app/src/main/java/androidx/compose/samples/crane/details/DetailsActivity.kt
-[data]: app/src/main/java/androidx/compose/samples/crane/data/CraneData.kt
 [mainViewModel]: app/src/main/java/androidx/compose/samples/crane/home/MainViewModel.kt
+[detailsViewModel]: app/src/main/java/androidx/compose/samples/crane/details/DetailsViewModel.kt
 [homeTest]: app/src/androidTest/java/androidx/compose/samples/crane/home/HomeTest.kt
 [detailsTest]: app/src/androidTest/java/androidx/compose/samples/crane/details/DetailsActivityTest.kt
-[coil-accompanist]: https://github.com/chrisbanes/accompanist
+[coil-accompanist]: https://google.github.io/accompanist/coil/
+[hilt]: https://d.android.com/hilt

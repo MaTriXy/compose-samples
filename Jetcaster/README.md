@@ -5,7 +5,8 @@
 Jetcaster is a sample podcast app, built with [Jetpack Compose][compose]. The goal of the sample is to
 showcase dynamic theming and full featured architecture.
 
-To try out this sample app, you need to use the latest Canary version of Android Studio 4.2.
+To try out this sample app, use the latest stable version
+of [Android Studio](https://developer.android.com/studio).
 You can clone this repository or import the
 project from Android Studio following the steps
 [here](https://developer.android.com/jetpack/compose/setup#sample).
@@ -18,15 +19,22 @@ most of the app's architecture has been implemented, as well as the data layer, 
 
 ## Screenshots
 
-<img src="docs/jetcaster.gif"/>
+<img src="docs/screenshots.png"/>
 
 ## Features
 
-This sample contains 1 screen so far: the home screen. It is split into sub-screens for easy re-use:
+This sample contains 2 screens so far: the home screen, and a player screen.
+
+The home screen is split into sub-screens for easy re-use:
 
 - __Home__, allowing the user to see their followed podcasts (top carousel), and navigate between 'Your Library' and 'Discover'
-  - __Discover__, allowing the user to browse podcast categories
-    - __Podcast Category__, allowing the user to see a list of recent episodes for podcasts in a given category.
+- __Discover__, allowing the user to browse podcast categories
+- __Podcast Category__, allowing the user to see a list of recent episodes for podcasts in a given category.
+
+The player screen displays media controls and the currently "playing" podcast (the sample currently doesn't actually play any media).
+The player screen layout is adapting to different form factors, including a tabletop layout on foldable devices:
+
+<img src="docs/tabletop.png"/>
 
 ### Dynamic theming
 The home screen currently implements dynamic theming, using the artwork of the currently selected podcast from the carousel to  update the  `primary` and `onPrimary` [colors](https://developer.android.com/reference/kotlin/androidx/compose/material/Colors). You can see it in action in the screenshots above: as the carousel item is changed, the background gradient is updated to match the artwork.
@@ -54,8 +62,7 @@ Underneath, [`DominantColorState`](app/src/main/java/com/example/jetcaster/util/
 ### Others
 Some other notable things which are implemented:
 
-* [`WindowInsets`](https://developer.android.com/reference/kotlin/android/view/WindowInsets) support is provided from this [experimental implementation](https://gist.github.com/chrisbanes/14f9184e7b22299203037df739a6512b). Support will likely will added to the Compose libraries in the future.
-* Images are all provided from each podcast's RSS feed, and loaded using [accompanist-coil](https://github.com/chrisbanes/accompanist).
+* Images are all provided from each podcast's RSS feed, and loaded using [Coil][coil] library.
 
 ## Architecture
 The app is built in a Redux-style, where each UI 'screen' has its own [ViewModel][viewmodel], which exposes a single [StateFlow][stateflow] containing the entire view state. Each [ViewModel][viewmodel] is responsible for subscribing to any data streams required for the view, as well as exposing functions which allow the UI to send events.
@@ -64,11 +71,11 @@ Using the example of the home screen in the [`com.example.jetcaster.ui.home`](ap
 
  - The ViewModel is implemented as [`HomeViewModel`][homevm], which exposes a `StateFlow<HomeViewState>` for the UI to observe.
  - [`HomeViewState`][homevm] contains the complete view state for the home screen as an [`@Immutable`](https://developer.android.com/reference/kotlin/androidx/compose/runtime/Immutable) `data class`.
- - The Home Compose UI in [`Home.kt`][homeui] uses [`HomeViewModel`][homevm], and observes it's [`HomeViewState`][homevm] as Compose [State](https://developer.android.com/reference/kotlin/androidx/compose/runtime/State), using [`collectAsState()`](https://developer.android.com/reference/kotlin/androidx/compose/package-summary#collectasstate):
+ - The Home Compose UI in [`Home.kt`][homeui] uses [`HomeViewModel`][homevm], and observes it's [`HomeViewState`][homevm] as Compose [State](https://developer.android.com/reference/kotlin/androidx/compose/runtime/State), using [`collectAsStateWithLifecycle()`](https://developer.android.com/reference/kotlin/androidx/lifecycle/compose/package-summary#(kotlinx.coroutines.flow.StateFlow).collectAsStateWithLifecycle(androidx.lifecycle.LifecycleOwner,androidx.lifecycle.Lifecycle.State,kotlin.coroutines.CoroutineContext)):
 
 ``` kotlin
 val viewModel: HomeViewModel = viewModel()
-val viewState by viewModel.state.collectAsState()
+val viewState by viewModel.state.collectAsStateWithLifecycle()
 ```
 
 This pattern is used across the different screens:
@@ -132,4 +139,3 @@ limitations under the License.
  [rome]: https://rometools.github.io/rome/
  [jdk8desugar]: https://developer.android.com/studio/write/java8-support#library-desugaring
  [coil]: https://coil-kt.github.io/coil/
- 

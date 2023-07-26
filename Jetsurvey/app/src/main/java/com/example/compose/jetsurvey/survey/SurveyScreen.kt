@@ -16,72 +16,70 @@
 
 package com.example.compose.jetsurvey.survey
 
-import androidx.annotation.StringRes
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope.align
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
-import androidx.compose.foundation.layout.preferredWidth
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
-import androidx.compose.material.TextButton
-import androidx.compose.material.TopAppBar
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.outlined.FiberManualRecord
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.savedinstancestate.savedInstanceState
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.compose.jetsurvey.R
+import com.example.compose.jetsurvey.theme.stronglyDeemphasizedAlpha
+import com.example.compose.jetsurvey.util.supportWideScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
+// Scaffold is experimental in m3
 @Composable
 fun SurveyQuestionsScreen(
-    questions: SurveyState.Questions,
-    onAction: (Int, SurveyActionType) -> Unit,
+    surveyScreenData: SurveyScreenData,
+    isNextEnabled: Boolean,
+    onClosePressed: () -> Unit,
+    onPreviousPressed: () -> Unit,
+    onNextPressed: () -> Unit,
     onDonePressed: () -> Unit,
-    onBackPressed: () -> Unit
+    content: @Composable (PaddingValues) -> Unit,
 ) {
-    var currentQuestionIndex by savedInstanceState { 0 }
-    val questionState =
-        remember(currentQuestionIndex) { questions.questionsState[currentQuestionIndex] }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = Modifier.supportWideScreen()) {
         Scaffold(
-            topBar = { SurveyTopAppBar(questions.surveyTitle, onBackPressed) },
-            bodyContent = { innerPadding ->
-                Question(
-                    question = questionState.question,
-                    answer = questionState.answer,
-                    onAnswer = { questionState.answer = it },
-                    onAction = onAction,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
+            topBar = {
+                SurveyTopAppBar(
+                    questionIndex = surveyScreenData.questionIndex,
+                    totalQuestionsCount = surveyScreenData.questionCount,
+                    onClosePressed = onClosePressed,
                 )
             },
+            content = content,
             bottomBar = {
                 SurveyBottomBar(
-                    questionState = questionState,
-                    onPreviousPressed = { currentQuestionIndex-- },
-                    onNextPressed = { currentQuestionIndex++ },
+                    shouldShowPreviousButton = surveyScreenData.shouldShowPreviousButton,
+                    shouldShowDoneButton = surveyScreenData.shouldShowDoneButton,
+                    isNextButtonEnabled = isNextEnabled,
+                    onPreviousPressed = onPreviousPressed,
+                    onNextPressed = onNextPressed,
                     onDonePressed = onDonePressed
                 )
             }
@@ -89,23 +87,29 @@ fun SurveyQuestionsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class) // Scaffold is experimental in m3
 @Composable
 fun SurveyResultScreen(
-    result: SurveyState.Result,
     onDonePressed: () -> Unit,
-    onBackPressed: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize()) {
+
+    Surface(modifier = Modifier.supportWideScreen()) {
         Scaffold(
-            topBar = { SurveyTopAppBar(result.surveyTitle, onBackPressed) },
-            bodyContent = { innerPadding ->
+            content = { innerPadding ->
                 val modifier = Modifier.padding(innerPadding)
-                SurveyResult(result = result, modifier = modifier)
+                SurveyResult(
+                    title = stringResource(R.string.survey_result_title),
+                    subtitle = stringResource(R.string.survey_result_subtitle),
+                    description = stringResource(R.string.survey_result_description),
+                    modifier = modifier
+                )
             },
             bottomBar = {
                 OutlinedButton(
-                    onClick = { onDonePressed() },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp)
+                    onClick = onDonePressed,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 24.dp)
                 ) {
                     Text(text = stringResource(id = R.string.done))
                 }
@@ -115,115 +119,149 @@ fun SurveyResultScreen(
 }
 
 @Composable
-private fun SurveyResult(result: SurveyState.Result, modifier: Modifier = Modifier) {
-    ScrollableColumn(modifier = modifier.fillMaxSize()) {
-        Spacer(modifier = Modifier.preferredHeight(44.dp))
+private fun SurveyResult(
+    title: String,
+    subtitle: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(modifier = modifier.fillMaxSize()) {
+        item {
+            Spacer(modifier = Modifier.height(44.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.displaySmall,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(20.dp)
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TopAppBarTitle(
+    questionIndex: Int,
+    totalQuestionsCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier) {
         Text(
-            text = result.surveyResult.library,
-            style = MaterialTheme.typography.h3,
-            modifier = Modifier.padding(horizontal = 20.dp)
+            text = (questionIndex + 1).toString(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = stronglyDeemphasizedAlpha)
         )
         Text(
-            text = stringResource(
-                result.surveyResult.result,
-                result.surveyResult.library
-            ),
-            style = MaterialTheme.typography.subtitle1,
-            modifier = Modifier.padding(20.dp)
+            text = stringResource(R.string.question_count, totalQuestionsCount),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         )
-        Text(
-            text = stringResource(result.surveyResult.description),
-            style = MaterialTheme.typography.body1,
-            modifier = Modifier.padding(horizontal = 20.dp)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class) // CenterAlignedTopAppBar is experimental in m3
+@Composable
+fun SurveyTopAppBar(
+    questionIndex: Int,
+    totalQuestionsCount: Int,
+    onClosePressed: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+
+        CenterAlignedTopAppBar(
+            title = {
+                TopAppBarTitle(
+                    questionIndex = questionIndex,
+                    totalQuestionsCount = totalQuestionsCount,
+                )
+            },
+            actions = {
+                IconButton(
+                    onClick = onClosePressed,
+                    modifier = Modifier.padding(4.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(id = R.string.close),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(stronglyDeemphasizedAlpha)
+                    )
+                }
+            }
+        )
+
+        val animatedProgress by animateFloatAsState(
+            targetValue = (questionIndex + 1) / totalQuestionsCount.toFloat(),
+            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
+        )
+        LinearProgressIndicator(
+            progress = animatedProgress,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
         )
     }
 }
 
 @Composable
-private fun SurveyTopAppBar(
-    @StringRes surveyTitle: Int,
-    onBackPressed: () -> Unit
-) {
-    TopAppBar(
-        title = {
-            Text(
-                text = stringResource(id = surveyTitle),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBackPressed) {
-                Icon(Icons.Filled.ChevronLeft)
-            }
-        },
-        // We need to balance the navigation icon, so we add a spacer.
-        actions = {
-            Spacer(modifier = Modifier.preferredWidth(68.dp))
-        },
-        backgroundColor = MaterialTheme.colors.surface,
-        elevation = 0.dp
-    )
-}
-
-@Composable
-private fun SurveyBottomBar(
-    questionState: QuestionState,
+fun SurveyBottomBar(
+    shouldShowPreviousButton: Boolean,
+    shouldShowDoneButton: Boolean,
+    isNextButtonEnabled: Boolean,
     onPreviousPressed: () -> Unit,
     onNextPressed: () -> Unit,
     onDonePressed: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 7.dp,
     ) {
-        TextButton(
-            modifier = Modifier.weight(1f).wrapContentWidth(align = Alignment.Start),
-            onClick = onPreviousPressed,
-            enabled = questionState.enablePrevious
-        ) {
-            Text(text = stringResource(id = R.string.previous))
-        }
-        PageIndicator(
-            pagesCount = questionState.totalQuestionsCount,
-            currentPageIndex = questionState.questionIndex
-        )
-        if (questionState.showDone) {
-            TextButton(
-                modifier = Modifier.weight(1f).wrapContentWidth(align = Alignment.End),
-                onClick = onDonePressed
-            ) {
-                Text(text = stringResource(id = R.string.done))
-            }
-        } else {
-            TextButton(
-                modifier = Modifier.weight(1f).wrapContentWidth(align = Alignment.End),
-                onClick = onNextPressed
-            ) {
-                Text(text = stringResource(id = R.string.next))
-            }
-        }
-    }
-}
 
-@Composable
-private fun PageIndicator(pagesCount: Int, currentPageIndex: Int, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .wrapContentWidth(align = Alignment.CenterHorizontally)
-            .align(Alignment.CenterVertically)
-    ) {
-        for (pageIndex in 0 until pagesCount) {
-            val asset = if (currentPageIndex == pageIndex) {
-                Icons.Filled.FiberManualRecord
-            } else {
-                Icons.Outlined.FiberManualRecord
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 20.dp)
+        ) {
+            if (shouldShowPreviousButton) {
+                OutlinedButton(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    onClick = onPreviousPressed
+                ) {
+                    Text(text = stringResource(id = R.string.previous))
+                }
+                Spacer(modifier = Modifier.width(16.dp))
             }
-            Icon(
-                asset = asset,
-                tint = MaterialTheme.colors.primary
-            )
+            if (shouldShowDoneButton) {
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    onClick = onDonePressed,
+                    enabled = isNextButtonEnabled,
+                ) {
+                    Text(text = stringResource(id = R.string.done))
+                }
+            } else {
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    onClick = onNextPressed,
+                    enabled = isNextButtonEnabled,
+                ) {
+                    Text(text = stringResource(id = R.string.next))
+                }
+            }
         }
     }
 }
